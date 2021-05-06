@@ -2,7 +2,7 @@
 
 a chemical identifiers search package, using the databases present at CalebBell/chemicals.
 # Warning
-Work in progress, many things could change
+Work in progress, many things could change.
 
 ## Instalation:
 ```
@@ -19,9 +19,8 @@ julia> res = search_chemical("water")
 (pubchemid = 962, CAS = (7732, 18, 5), formula = "H2O", MW = 18.01528, smiles = "O", InChI = "H2O/h1H2", InChI_key = "XLYOFNOQVPJJNP-UHFFFAOYSA-N", iupac_name = "oxidane", common_name = "water")
 ```
 
-the package stores the query in `ChemicalIdentifiers.SEARCH_CACHE` as a `Dict{String,Any}`, so subsequent queries on the same (or similar) strings, dont pay the cost of searching in the database.
+The package stores each query in `ChemicalIdentifiers.SEARCH_CACHE` as a `Dict{String,Any}`, so subsequent queries on the same (or similar) strings, dont pay the cost of searching in the database.
 
-This package is slower than the original python package, because we don't build a dictionary of all existent synonyms (about 700K synonyms), but perform a sorted search. but it should have better memory footprint for the same reason.
+If you don't want to store the query, you could use `search_chemical(query,nothing)`, or, if you want your own cache to be used, pass your own cache via `search_chemical(query,mycache)`
 
-
-
+This package is slower than the original python package, because we don't build a dictionary of all existent synonyms (about 700K synonyms), but perform a sorted search. this is in exchange for a quicker loading time on rarer queries and a lower memory footprint.
