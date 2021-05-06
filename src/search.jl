@@ -1,6 +1,10 @@
 const SEARCH_CACHE = Dict{String,Any}()
 
+
 function build_result(idx,key)
+    if idx == -1
+        return missing
+    end
     db,sdb = DATA_DB[key]
     pubchemid= db.pubchemid[idx]
     CAS= db.CAS[idx]
@@ -33,7 +37,6 @@ function detect_query(id::String)
         return AnyQuery(id)
     end
 end
-
 
 function search_chemical(ID::String,cache=SEARCH_CACHE)
     if cache !== nothing
@@ -137,17 +140,16 @@ end
 
 function search_chemical_id(ID::CASQuery)
     id = cas_parse(value(ID))  
-    key = :not_found
+    key = :cas_not_found
     compound_id = -1
-    search_done = false
     #generating keys iteration order: user, short database, long database
+    search_done = false
     pkg_dbs = [:short,:long]
     allkeys = collect(keys(DATA_DB))
-    userdbs = setdiff(allkeys,pkg_dbs)
-    keys = append!(user_dbs,pkg_dbs)
-    #iterating on each DB (long,short,user ones)
-    for key in keys
-        db,sdb = CHEMPUB_DB[key]
+    user_dbs = setdiff(allkeys,pkg_dbs)
+    _keys = append!(user_dbs,pkg_dbs)
+    for key in _keys
+    db,sdb = DATA_DB[key]
         idx_from_prop = findall(isequal(id),db.CAS)
         if length(idx_from_prop) == 1 #should be unique
         compound_id = only(idx_from_prop)
@@ -164,17 +166,16 @@ end
 
 function search_chemical_id(ID::InChIKeyQuery)
     id = value(ID) 
-    key = :not_found
+    key = :inchikey_not_found
     compound_id = -1
     search_done = false
     #generating keys iteration order: user, short database, long database
     pkg_dbs = [:short,:long]
     allkeys = collect(keys(DATA_DB))
-    userdbs = setdiff(allkeys,pkg_dbs)
-    keys = append!(user_dbs,pkg_dbs)
-    #iterating on each DB (long,short,user ones)
-    for key in keys
-        db,sdb = CHEMPUB_DB[key]
+    user_dbs = setdiff(allkeys,pkg_dbs)
+    _keys = append!(user_dbs,pkg_dbs)
+    for key in _keys
+        db,sdb = DATA_DB[key]
         idx_from_prop = findall(isequal(id),db.InChI_key)
         if length(idx_from_prop) == 1 #should be unique
         compound_id = only(idx_from_prop)
@@ -190,17 +191,16 @@ end
 
 function search_chemical_id(ID::PubChemIDQuery)
     id = parse(int64,value(ID)) 
-    key = :not_found
+    key = :pubchem_not_found
     compound_id = -1
     search_done = false
     #generating keys iteration order: user, short database, long database
     pkg_dbs = [:short,:long]
     allkeys = collect(keys(DATA_DB))
-    userdbs = setdiff(allkeys,pkg_dbs)
-    keys = append!(user_dbs,pkg_dbs)
-    #iterating on each DB (long,short,user ones)
-    for key in keys
-        db,sdb = CHEMPUB_DB[key]
+    user_dbs = setdiff(allkeys,pkg_dbs)
+    _keys = append!(user_dbs,pkg_dbs)
+    for key in _keys
+        db,sdb = DATA_DB[key]
         idx_from_prop = findall(isequal(id),db.pubchemid)
         if length(idx_from_prop) == 1 #should be unique
         compound_id = only(idx_from_prop)
@@ -228,17 +228,16 @@ function search_chemical_id(ID::InChIQuery)
         throw("incorrect InChI passed")
     end
 
-    key = :not_found
+    key = :inchi_not_found
     compound_id = -1
     search_done = false
     #generating keys iteration order: user, short database, long database
     pkg_dbs = [:short,:long]
     allkeys = collect(keys(DATA_DB))
-    userdbs = setdiff(allkeys,pkg_dbs)
-    keys = append!(user_dbs,pkg_dbs)
-    #iterating on each DB (long,short,user ones)
-    for key in keys
-        db,sdb = CHEMPUB_DB[key]
+    user_dbs = setdiff(allkeys,pkg_dbs)
+    _keys = append!(user_dbs,pkg_dbs)
+        for key in _keys
+            db,sdb = DATA_DB[key]
         idx_from_prop = findall(isequal(id),db.pubchemid)
         if length(idx_from_prop) == 1 #should be unique
         compound_id = only(idx_from_prop)
