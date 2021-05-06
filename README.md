@@ -9,9 +9,10 @@ Work in progress, many things could change.
 using Pkg
 Pkg.add(https://github.com/longemen3000/ChemicalIdentifiers.jl)
 ```
+The databases are downloaded, parsed,processed and stored as Apache Arrow files at the first package usage, so the first usage may take some time.
 
 ## usage
-this package exports `search_chemical`, that, given a search string, performs a search on a database of over 70000 compounds, returning a Named Tuple with the identifiers of the substance in question. the databases are downloaded, parsed,processed and stored as arrow files at the first package usage, so the first instalation may take some time.
+This package exports `search_chemical`, that, given a search string, performs a search on a database of over 70000 compounds, returning a Named Tuple with the identifiers of the substance in question. 
 
 ```
 julia> using ChemicalIdentifiers
