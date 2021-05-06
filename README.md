@@ -1,7 +1,7 @@
 # ChemicalIdentifiers
 
 A chemical identifiers search package, using the databases present at CalebBell/chemicals.
-# Warning
+## Warning
 Work in progress, many things could change.
 
 ## Instalation:
@@ -11,7 +11,7 @@ Pkg.add(https://github.com/longemen3000/ChemicalIdentifiers.jl)
 ```
 The databases are downloaded, parsed,processed and stored as Apache Arrow files at the first package usage, so the first usage may take some time.
 
-## usage
+## Usage
 This package exports `search_chemical`, that, given a search string, performs a search on a database of over 70000 compounds, returning a Named Tuple with the identifiers of the substance in question. 
 
 ```
