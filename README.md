@@ -1,6 +1,6 @@
 # ChemicalIdentifiers
 
-a chemical identifiers search package, using the databases present at CalebBell/chemicals.
+A chemical identifiers search package, using the databases present at CalebBell/chemicals.
 # Warning
 Work in progress, many things could change.
 
