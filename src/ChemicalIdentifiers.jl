@@ -1,7 +1,7 @@
 module ChemicalIdentifiers
 
     const DATA_DB = Dict{Symbol,Any}()   
-    import Unicode,Downloads,Arrow,Scratch 
+    import Unicode,Downloads,Arrow,Scratch,ChemEquations
     #using ,Tables
     export search_chemical
 
