@@ -29,6 +29,8 @@ function detect_query(id::String)
         return ElementQuery(id)
     elseif is_cas(id)
         return CASQuery(id)
+    elseif is_pubchemid(id)
+        return PubChemIDQuery(id)
     elseif is_inchi(id)
         return InChIQuery(id)
     elseif is_inchikey(id)
@@ -37,6 +39,9 @@ function detect_query(id::String)
         return AnyQuery(id)
     end
 end
+#pubchem ID search
+search_chemical(ID::Int,cache=SEARCH_CACHE) = search_chemical(string(ID),cache)
+
 
 function search_chemical(ID::String,cache=SEARCH_CACHE)
     if cache !== nothing
@@ -51,7 +56,9 @@ function search_chemical(ID::String,cache=SEARCH_CACHE)
         end
         cache[normalized_id] = cache[ID]
     else
-        compound_id,key = search_chemical_id(detect_query(ID))
+        query = detect_query(ID)
+        #@show query
+        compound_id,key = search_chemical_id(query)
         build_result(compound_id,key)      #return db.common_name[compound_id]
     end
 end
@@ -190,7 +197,7 @@ function search_chemical_id(ID::InChIKeyQuery)
 end
 
 function search_chemical_id(ID::PubChemIDQuery)
-    id = parse(int64,value(ID)) 
+    id = parse(Int64,value(ID)) 
     key = :pubchem_not_found
     compound_id = -1
     search_done = false
@@ -215,6 +222,7 @@ function search_chemical_id(ID::PubChemIDQuery)
 end
 
 function search_chemical_id(ID::InChIQuery)
+    
     id_lower = lowercase(value(ID))
     re1 = r"^inchi=1s/"
     re2 =  r"^inchi=1/"
@@ -227,7 +235,6 @@ function search_chemical_id(ID::InChIQuery)
     else
         throw("incorrect InChI passed")
     end
-
     key = :inchi_not_found
     compound_id = -1
     search_done = false
@@ -238,7 +245,7 @@ function search_chemical_id(ID::InChIQuery)
     _keys = append!(user_dbs,pkg_dbs)
         for key in _keys
             db,sdb = DATA_DB[key]
-        idx_from_prop = findall(isequal(id),db.pubchemid)
+        idx_from_prop = findall(isequal(id),db.InChI)
         if length(idx_from_prop) == 1 #should be unique
         compound_id = only(idx_from_prop)
         search_done = true
