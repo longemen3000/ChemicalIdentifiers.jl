@@ -1,6 +1,4 @@
 
-const RAW_DATA_DIR = ["",""]
-const ARROW_DATA_DIR = ["","","",""]
 """
     cas_parse(str)
 
@@ -16,44 +14,26 @@ function cas_parse(str)
 end
 
 
-
+"""
+    load_db!(dbtype::Symbol)
+    downloads, processes and stores a database corresponding to the one with the same key stored in DATA_INFO
 
 """
-pub_data_download()
-download a fresh copy of the chemical identifiers database located at
-https://github.com/CalebBell/chemicals. gives a named tuple of all columns in the database
-"""
 
+function load_db!(dbtype::Symbol)
+    data = DATA_INFO[dbtype] #has url, 
 
-function pub_data_download(dbtype=:short)
-    key = 0
-    if dbtype == :long
-        key = 2
-        
-        if !isfile(RAW_DATA_DIR[2])
-            @info "long database file not found, downloading..."
-            url = "https://github.com/CalebBell/chemicals/raw/master/chemicals/Identifiers/chemical%20identifiers%20pubchem%20large.tsv"
-            fname = joinpath(download_cache, "pubchem_long")
-            path = Downloads.download(url,fname)
-            @info "long database file downloaded."
-            RAW_DATA_DIR[key] = path
-        end
-    elseif dbtype ==:short
-        key = 1
-        if !isfile(RAW_DATA_DIR[2])
-            @info "short database file not found, downloading..."
-            url  = "https://github.com/CalebBell/chemicals/raw/master/chemicals/Identifiers/chemical%20identifiers%20pubchem%20small.tsv"
-            fname = joinpath(download_cache, "pubchem_short")    
-            path = Downloads.download(url,fname)
-            @info "short database file downloaded."
-            RAW_DATA_DIR[key] = path
-        end
-    else
-        throw(error("incorrect symbol, only :short and :large are accepted."))
+    if !isfile(data.textdb)
+        @info "short database file not found, downloading..."
+        url  = data.url
+        fname = data.textdb   
+        path = Downloads.download(url,fname)
+        @show path
+        @info "short database file downloaded."
     end
-    path = RAW_DATA_DIR[key]
-    
-    if !isfile(ARROW_DATA_DIR[key])
+
+    path = data.textdb
+    if !isfile(data.db)
         @info String(dbtype) * " arrow file not generated, processing..."
         i = 0
         for line in eachline(path)
@@ -77,7 +57,7 @@ function pub_data_download(dbtype=:short)
         for line in eachline(path)
             i += 1
             strs = line |> z->rstrip(z,'\n') |> z->split(z,'\t')
-
+            try
             pubchemid[i] = parse(Int64,strs[1])
             CAS[i] = cas_parse(strs[2])
             formula[i] = strs[3]
@@ -88,59 +68,69 @@ function pub_data_download(dbtype=:short)
             iupac_name[i] = strs[8]
             common_name[i] = strs[9]
             _synonyms[i]  = strs[10:end]
-            synonyms[i] = zeros(Int,length(_synonyms[i]))
+            catch e
+                @show i
+                @show strs
+                rethrow(e)
+            end
         end
 
-        syms_i = mapreduce(length,+,synonyms)
+        syms_i = mapreduce(length,+,_synonyms)
         synonyms_list = Vector{String}(undef,syms_i)
         synonyms_index = Vector{Int}(undef,syms_i)
         
         k = 0
-        #@show _synonyms[1]
         for (ii,sym_vec) in pairs(_synonyms)
             
             for (jj,sym) in pairs(sym_vec)
                 k+=1
                 synonyms_list[k] = sym
                 synonyms_index[k] = ii
-                synonyms[ii][jj] = k
-            end
-        end
-        sort_order = sortperm(synonyms_list)
-        
-        list = synonyms_list[sort_order]
-        index = synonyms_index[sort_order]
-        #=
-        for (ii,sym_vec) in pairs(synonyms)
-            for (jj,sym) in pairs(sym_vec)
-                synonyms[ii][jj] = sort_order[synonyms[ii][jj]]
             end
         end
 
-        list = Vector{String}(undef,length(synonyms_index))
-        index = Vector{Int}(undef,length(synonyms_index))
-        for kk in 1:length(index)
-            list[kk] = synonyms_list[sort_order[kk]]
-            index[kk] = synonyms_index[sort_order[kk]]
-        end
-        @show index[1]
-        @show synonyms_index[1]
-        =#
+        sort_order = sortperm(synonyms_list)
+        list = synonyms_list[sort_order]
+        index = synonyms_index[sort_order]
         db = (;pubchemid, CAS, formula, MW, smiles, InChI, InChI_key, iupac_name, common_name)
         synonym_db = (list=list,index=index)
         io1 = IOBuffer()
         io2 = IOBuffer()
-        Arrow.write(ARROW_DATA_DIR[key],db)
-        Arrow.write(ARROW_DATA_DIR[key+2],synonym_db)
-        db = Arrow.Table(ARROW_DATA_DIR[key])
-        sdb = Arrow.Table(ARROW_DATA_DIR[key+2])
-
-    else
-        db = Arrow.Table(ARROW_DATA_DIR[key])
-        sdb = Arrow.Table(ARROW_DATA_DIR[key+2])
+        Arrow.write(data.db,db)
+        Arrow.write(data.symsdb,synonym_db)
+        db = Arrow.Table(data.db)
+        sdb = Arrow.Table(data.symsdb)
+    else 
+        db = Arrow.Table(data.db)
+        sdb = Arrow.Table(data.symsdb)
     end
     DATA_DB[dbtype] = (db,sdb) 
     return db,sdb
+end
+
+"""
+    load_data!(key::Symbol;url=nothing,file=nothing)
+
+generates and adds to the global DATA_INFO dict a new database. download and process this database with ´load_db(key)´
+"""
+function load_data!(key::Symbol;url=nothing,file=nothing)
+    if url == file == nothing 
+        throw(ArgumentError("a file or a url must be provided."))
+    elseif (url !== nothing) & (file !== nothing)
+        throw(ArgumentError("a file or a url must be provided."))
+    elseif (url !== nothing)  
+        fname = joinpath(download_cache, "pubchem_" * string(key))
+        farrow = fname * ".arrow"
+        fsyms = fname * "_synonyms.arrow"
+        data = (url=url,textdb=fname,db=farrow,symsdb=fsyms)
+    else #file
+        fname = file
+        url = fname
+        farrow = fname * ".arrow"
+        fsyms = fname * "_synonyms.arrow"
+        data = (url=url,textdb=fname,db=farrow,symsdb=fsyms)
+    end
+    DATA_INFO[key] = data
 end
 
 

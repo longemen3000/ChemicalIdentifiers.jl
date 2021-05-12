@@ -1,10 +1,11 @@
 module ChemicalIdentifiers
 
     const DATA_DB = Dict{Symbol,Any}()   
-    import Unicode,Downloads,Arrow,Scratch,ChemEquations
-    #using ,Tables
+    const DATA_INFO = Dict{Symbol,Any}()
+    
+    import Unicode,Downloads,Arrow,ChemEquations
+    import Scratch, Preferences
     export search_chemical
-
     
     download_cache = ""    
 
@@ -13,20 +14,34 @@ module ChemicalIdentifiers
     include("search.jl")
 
 
+    #const FAST_INDEX = Preferences.@load_preference("fast_index","false")
+    const FAST_INDEX = false
+ #=
+    function fast_index!(val::Bool) 
+        Preferences.@set_preferences!("fast_index" => string(val))
+        val = Preferences.@load_preference("fast_index",false)
+        if val
+            @info("Fast index set; restart your Julia session for this change to take effect.")
+        else
+            @info("fast index unset; restart your Julia session for this change to take effect.")
+        end
+    end
+=#
+#=
+    function fast_index()
+    return Preferences.@load_preference("fast_index",false)
+    end
+    =#
+
     function __init__()
         global download_cache = Scratch.@get_scratch!("databases")
-        url_long = "https://github.com/CalebBell/chemicals/raw/master/chemicals/Identifiers/chemical%20identifiers%20pubchem%20large.tsv"
         url_short = "https://github.com/CalebBell/chemicals/raw/master/chemicals/Identifiers/chemical%20identifiers%20pubchem%20small.tsv"
-        fname_long = joinpath(download_cache, "pubchem_long")
-        fname_short = joinpath(download_cache, "pubchem_short")
-        RAW_DATA_DIR[1] = fname_short
-        RAW_DATA_DIR[2] = fname_long
-        ARROW_DATA_DIR[1] = fname_short * ".arrow"
-        ARROW_DATA_DIR[2] = fname_long * ".arrow"
-        ARROW_DATA_DIR[3] = fname_short * "_synonyms.arrow"
-        ARROW_DATA_DIR[4] = fname_long * "_synonyms.arrow"
-        pub_data_download(:short)
-        pub_data_download(:long)
+        url_long = "https://github.com/CalebBell/chemicals/raw/master/chemicals/Identifiers/chemical%20identifiers%20pubchem%20large.tsv"
+        load_data!(:short,url= url_short)
+        load_data!(:long,url = url_long)
+
+        load_db!(:short)
+        load_db!(:long)
     end
 end
 

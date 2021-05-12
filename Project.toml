@@ -7,14 +7,15 @@ version = "0.1.0"
 Arrow = "69666777-d1a9-59fb-9406-91d4454c9d45"
 ChemEquations = "75e6b969-eb85-49eb-b654-b2cb515e226f"
 Downloads = "f43a241f-c20a-4ad4-852c-f6b1247861c6"
+Preferences = "21216c6a-2e73-6563-6e65-726566657250"
 Scratch = "6c6a2e73-6563-6170-7368-637461726353"
 Unicode = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 
 [compat]
+Arrow = "1.4"
 ChemEquations = "0.2"
 Scratch = "^1"
 julia = "^1.6"
-Arrow = "1.4"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
