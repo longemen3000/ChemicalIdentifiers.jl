@@ -21,20 +21,19 @@ end
 """
 
 function load_db!(dbtype::Symbol)
-    data = DATA_INFO[dbtype] #has url, 
+    data = DATA_INFO[dbtype]
 
     if !isfile(data.textdb)
-        @info "short database file not found, downloading..."
+        @info ":" * string(dbtype) * "database file not found, downloading from " * data.url
         url  = data.url
         fname = data.textdb   
         path = Downloads.download(url,fname)
-        @show path
-        @info "short database file downloaded."
+        @info ":" * string(dbtype) *  "database file downloaded."
     end
 
     path = data.textdb
     if !isfile(data.db)
-        @info String(dbtype) * " arrow file not generated, processing..."
+        @info ":" * string(dbtype) * * " arrow file not generated, processing..."
         i = 0
         for line in eachline(path)
             i +=1
@@ -57,7 +56,6 @@ function load_db!(dbtype::Symbol)
         for line in eachline(path)
             i += 1
             strs = line |> z->rstrip(z,'\n') |> z->split(z,'\t')
-            try
             pubchemid[i] = parse(Int64,strs[1])
             CAS[i] = cas_parse(strs[2])
             formula[i] = strs[3]
@@ -68,11 +66,6 @@ function load_db!(dbtype::Symbol)
             iupac_name[i] = strs[8]
             common_name[i] = strs[9]
             _synonyms[i]  = strs[10:end]
-            catch e
-                @show i
-                @show strs
-                rethrow(e)
-            end
         end
 
         syms_i = mapreduce(length,+,_synonyms)
