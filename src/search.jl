@@ -18,11 +18,7 @@ function build_result(idx,key)
     return (;pubchemid, CAS, formula, MW, smiles, InChI, InChI_key, iupac_name, common_name)
 end
 
-function build_result(idx,key,symbol)
-    db,sdb = DATA_DB[key]
-    col= db[symbol]
-    return col[idx]
-end
+
 
 function detect_query(id::String)
     if is_element(id)
@@ -75,14 +71,16 @@ function search_chemical_id(ID::AnyQuery;skip_common_name = false,try_strategies
     user_dbs = setdiff(allkeys,pkg_dbs)
     _keys = append!(user_dbs,pkg_dbs)
     for key in _keys
-    db,sdb = DATA_DB[key]
-    
+    db,sdb,sortdb = DATA_DB[key]
         if !skip_common_name
-            idx_from_name = findfirst(isequal(id),db.common_name)
-            if idx_from_name !== nothing
-                compound_id = only(idx_from_name)
+            searchvec = view(db.common_name,sortdb.common_name_sort)
+            idx_sort = searchsorted(searchvec,id)
+            #@show idx_sort
+            if length(idx_sort) == 1 #found and element
+                idx = only(sortdb.common_name_sort[idx_sort])
+                compound_id =idx
                 search_done = true
-            end 
+            end
         end
         if !search_done
             idx = searchsorted(sdb.list,id)
@@ -156,12 +154,15 @@ function search_chemical_id(ID::CASQuery)
     user_dbs = setdiff(allkeys,pkg_dbs)
     _keys = append!(user_dbs,pkg_dbs)
     for key in _keys
-    db,sdb = DATA_DB[key]
-        idx_from_prop = findall(isequal(id),db.CAS)
-        if length(idx_from_prop) == 1 #should be unique
-        compound_id = only(idx_from_prop)
-        search_done = true
-        end 
+        db,sdb,sortdb = DATA_DB[key]
+        searchvec = view(db.CAS,sortdb.CAS_sort)
+        idx_sort = searchsorted(searchvec,id)
+        #@show idx_sort
+        if length(idx_sort) == 1 #found and element
+            idx = only(sortdb.CAS_sort[idx_sort])
+            compound_id =idx
+            search_done = true
+        end
     #found in db,returning
         if search_done
             return compound_id,key 
@@ -172,6 +173,7 @@ function search_chemical_id(ID::CASQuery)
 end
 
 function search_chemical_id(ID::InChIKeyQuery)
+    #symbol: InChI_key
     id = value(ID) 
     key = :inchikey_not_found
     compound_id = -1
@@ -182,12 +184,15 @@ function search_chemical_id(ID::InChIKeyQuery)
     user_dbs = setdiff(allkeys,pkg_dbs)
     _keys = append!(user_dbs,pkg_dbs)
     for key in _keys
-        db,sdb = DATA_DB[key]
-        idx_from_prop = findall(isequal(id),db.InChI_key)
-        if length(idx_from_prop) == 1 #should be unique
-        compound_id = only(idx_from_prop)
-        search_done = true
-        end 
+        db,sdb,sortdb = DATA_DB[key]
+        searchvec = view(db.InChI_key,sortdb.InChI_key_sort)
+        idx_sort = searchsorted(searchvec,id)
+        #@show idx_sort
+        if length(idx_sort) == 1 #found and element
+            idx = only(sortdb.InChI_key_sort[idx_sort])
+            compound_id =idx
+            search_done = true
+        end
     #found in db,returning
         if search_done
             return compound_id,key 
@@ -197,6 +202,7 @@ function search_chemical_id(ID::InChIKeyQuery)
 end
 
 function search_chemical_id(ID::PubChemIDQuery)
+    #pubchemid
     id = parse(Int64,value(ID)) 
     key = :pubchem_not_found
     compound_id = -1
@@ -207,12 +213,15 @@ function search_chemical_id(ID::PubChemIDQuery)
     user_dbs = setdiff(allkeys,pkg_dbs)
     _keys = append!(user_dbs,pkg_dbs)
     for key in _keys
-        db,sdb = DATA_DB[key]
-        idx_from_prop = findall(isequal(id),db.pubchemid)
-        if length(idx_from_prop) == 1 #should be unique
-        compound_id = only(idx_from_prop)
-        search_done = true
-        end 
+        db,sdb,sortdb = DATA_DB[key]
+        searchvec = view(db.pubchemid,sortdb.pubchemid_sort)
+        idx_sort = searchsorted(searchvec,id)
+        #@show idx_sort
+        if length(idx_sort) == 1 #found and element
+            idx = only(sortdb.pubchemid_sort[idx_sort])
+            compound_id =idx
+            search_done = true
+        end
     #found in db,returning
         if search_done
             return compound_id,key 
@@ -222,7 +231,7 @@ function search_chemical_id(ID::PubChemIDQuery)
 end
 
 function search_chemical_id(ID::InChIQuery)
-    
+    println("a")
     id_lower = lowercase(value(ID))
     re1 = r"^inchi=1s/"
     re2 =  r"^inchi=1/"
@@ -243,13 +252,16 @@ function search_chemical_id(ID::InChIQuery)
     allkeys = collect(keys(DATA_DB))
     user_dbs = setdiff(allkeys,pkg_dbs)
     _keys = append!(user_dbs,pkg_dbs)
-        for key in _keys
-            db,sdb = DATA_DB[key]
-        idx_from_prop = findall(isequal(id),db.InChI)
-        if length(idx_from_prop) == 1 #should be unique
-        compound_id = only(idx_from_prop)
-        search_done = true
-        end 
+    for key in _keys
+        db,sdb,sortdb = DATA_DB[key]
+        searchvec = view(db.InChI,sortdb.InChI_sort)
+        idx_sort = searchsorted(searchvec,id)
+        #@show idx_sort
+        if length(idx_sort) == 1 #found and element
+            idx = only(sortdb.InChI_sort[idx_sort])
+            compound_id =idx
+            search_done = true
+        end
     #found in db,returning
         if search_done
             return compound_id,key 

@@ -24,18 +24,18 @@ function load_db!(dbtype::Symbol)
     data = DATA_INFO[dbtype]
 
     if !isfile(data.textdb)
-        @info ":" * string(dbtype) * "database file not found, downloading from " * data.url
+        @info ":" * string(dbtype) * " database file not found, downloading from " * data.url
         url  = data.url
         fname = data.textdb   
         path = Downloads.download(url,fname)
-        @info ":" * string(dbtype) *  "database file downloaded."
+        @info ":" * string(dbtype) *  " database file downloaded."
     end
 
     path = data.textdb
     if !isfile(data.db)
-        @info ":" * string(dbtype) * * " arrow file not generated, processing..."
+        @info ":" * string(dbtype)  * " arrow file not generated, processing..."
         i = 0
-        for line in eachline(path)
+        for _ in eachline(path)
             i +=1
         end
 
@@ -49,7 +49,6 @@ function load_db!(dbtype::Symbol)
         iupac_name = Vector{String}(undef,i)
         common_name = Vector{String}(undef,i)
         _synonyms  = Vector{Vector{String}}(undef,i)
-        synonyms  = Vector{Vector{Int}}(undef,i)
 
         #@show i
         i = 0
@@ -82,23 +81,39 @@ function load_db!(dbtype::Symbol)
             end
         end
 
-        sort_order = sortperm(synonyms_list)
-        list = synonyms_list[sort_order]
-        index = synonyms_index[sort_order]
+
+        pubchemid_sort =sortperm(pubchemid)
+        CAS_sort = sortperm(CAS)
+        formula_sort =sortperm(formula)
+        MW_sort =sortperm(MW)
+        smiles_sort =sortperm(smiles)
+        InChI_sort =sortperm(InChI)
+        InChI_key_sort =sortperm(InChI_key)
+        iupac_name_sort =sortperm(iupac_name)
+        common_name_sort =sortperm(common_name)
+        synonyms_sort = sortperm(synonyms_list)
+
+        list = synonyms_list[synonyms_sort]
+        index = synonyms_index[synonyms_sort]
         db = (;pubchemid, CAS, formula, MW, smiles, InChI, InChI_key, iupac_name, common_name)
-        synonym_db = (list=list,index=index)
-        io1 = IOBuffer()
-        io2 = IOBuffer()
+        synonym_db = (;list,index)
+        sort_db = (;pubchemid_sort, CAS_sort, formula_sort, MW_sort, smiles_sort, InChI_sort, InChI_key_sort, iupac_name_sort, common_name_sort)
+        
         Arrow.write(data.db,db)
         Arrow.write(data.symsdb,synonym_db)
-        db = Arrow.Table(data.db)
-        sdb = Arrow.Table(data.symsdb)
+        Arrow.write(data.sorteddb,sort_db)
+
+        arrow_db = Arrow.Table(data.db)
+        arrow_synonym_db = Arrow.Table(data.symsdb)
+        arrow_sort_db = Arrow.Table(data.sorteddb)
     else 
-        db = Arrow.Table(data.db)
-        sdb = Arrow.Table(data.symsdb)
+        arrow_db = Arrow.Table(data.db)
+        arrow_synonym_db = Arrow.Table(data.symsdb)
+        arrow_sort_db = Arrow.Table(data.sorteddb)
+
     end
-    DATA_DB[dbtype] = (db,sdb) 
-    return db,sdb
+    DATA_DB[dbtype] = (arrow_db,arrow_synonym_db,arrow_sort_db) 
+    return arrow_db,arrow_synonym_db,arrow_sort_db
 end
 
 """
@@ -115,16 +130,20 @@ function load_data!(key::Symbol;url=nothing,file=nothing)
         fname = joinpath(download_cache, "pubchem_" * string(key))
         farrow = fname * ".arrow"
         fsyms = fname * "_synonyms.arrow"
-        data = (url=url,textdb=fname,db=farrow,symsdb=fsyms)
+        sorted = fname * "_sorted.arrow"
+        data = (url=url,textdb=fname,db=farrow,symsdb=fsyms,sorteddb=sorted)
+
     else #file
         fname = file
         url = fname
         farrow = fname * ".arrow"
         fsyms = fname * "_synonyms.arrow"
-        data = (url=url,textdb=fname,db=farrow,symsdb=fsyms)
+        sorted = fname * "_sorted.arrow"
+        data = (url=url,textdb=fname,db=farrow,symsdb=fsyms,sorteddb=sorted)
     end
     DATA_INFO[key] = data
 end
+
 
 
 
