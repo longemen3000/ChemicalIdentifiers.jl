@@ -34,7 +34,7 @@ The package stores each query in `ChemicalIdentifiers.SEARCH_CACHE` as a `Dict{S
 
 If you don't want to store the query, you could use `search_chemical(query,nothing)`, or, if you want your own cache to be used, pass your own cache via `search_chemical(query,mycache)`. 
 
-#Custom Databases
+## Custom Databases
 If you want to add your own databases, you could use the (unexported) data utilities to do so. lets say we also want to add the inorganic database located at https://github.com/CalebBell/chemicals/blob/master/chemicals/Identifiers/Inorganic%20db.tsv. we could do:
 ```
 using ChemicalIdentifiers
