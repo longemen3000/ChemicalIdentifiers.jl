@@ -2,7 +2,35 @@ abstract type AbstractSearchQuery end
 
 struct CASQuery <: AbstractSearchQuery 
     ID::String
+    cas::Tuple{Int32,Int16,Int16}
 end
+
+function CASQuery(str::String)
+    cas = cas_parse(str)
+    return CASQuery(str,cas)
+end
+
+function CASQuery(val::NTuple{3,Integer})
+    n1 = val[1]
+    n2 = val[2]
+    n3 = val[3]
+    @assert n1 >=0
+    @assert n2 >=0
+    @assert n3 >=0
+    v1 = convert(Int32,n1)
+    v2 = convert(Int16,n2)
+    v3 = convert(Int16,n3)
+    cas = (v1,v2,v3)
+    return CASQuery("",cas)
+end
+
+function tuple_to_casstr(n1,n2,n3)
+
+    return string(n1) * "-" * string(n2) * "-" * string(n3)
+end
+
+tuple_to_casstr(val::NTuple{3,Integer}) = tuple_to_casstr(val...)
+cas(id::CASQuery) = id.cas
 
 struct InChIQuery <: AbstractSearchQuery
     ID::String
@@ -14,7 +42,21 @@ end
 
 struct PubChemIDQuery <: AbstractSearchQuery
     ID::String
+    val::Int
 end
+
+function PubChemIDQuery(str::String)
+    val = parse(Int,str)
+    @assert val >0
+    return PubChemIDQuery(str,val)
+end
+
+function PubChemIDQuery(val::Integer)
+    @assert val >0
+    return PubChemIDQuery("",val)
+end
+
+id_num(ID::PubChemIDQuery) = ID.val
 
 struct SMILESQuery <: AbstractSearchQuery
     ID::String
@@ -33,6 +75,28 @@ struct AnyQuery <: AbstractSearchQuery
 end
 
 value(id::AbstractSearchQuery)::String = strip(id.ID) 
+
+
+function value(id::SMILESQuery)::String
+    id = strip(id.ID)
+    return replace(id,"SMILES=" =>"")
+end
+
+function value(id::InChIQuery)::String
+    id_raw = strip(id.ID)
+    id_lower = lowercase(id_raw)
+    re1 = r"^inchi=1s/"
+    re2 =  r"^inchi=1/"
+    t1 = occursin(re1,id_lower)
+    t2 = occursin(re2,id_lower)
+    if t1
+        return chop(id_raw,head=9,tail=0)
+    elseif t2
+        return chop(id_raw,head=8,tail=0)
+    else
+        throw("incorrect InChI passed")
+    end
+end
 
 """
     is_cas(str)::Bool

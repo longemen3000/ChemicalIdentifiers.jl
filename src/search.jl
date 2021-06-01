@@ -1,6 +1,5 @@
 const SEARCH_CACHE = Dict{String,Any}()
 
-
 function build_result(idx,key)
     if idx == -1
         return missing
@@ -18,8 +17,6 @@ function build_result(idx,key)
     return (;pubchemid, CAS, formula, MW, smiles, InChI, InChI_key, iupac_name, common_name)
 end
 
-
-
 function detect_query(id::String)
     if is_element(id)
         return ElementQuery(id)
@@ -31,31 +28,56 @@ function detect_query(id::String)
         return InChIQuery(id)
     elseif is_inchikey(id)
         return InChIKeyQuery(id)
+    elseif is_smiles(id)
+        return SMILESQuery(id)
     else
         return AnyQuery(id)
     end
 end
-#pubchem ID search
-search_chemical(ID::Int,cache=SEARCH_CACHE) = search_chemical(string(ID),cache)
+
+function detect_query(id::Int)
+        return PubChemIDQuery(id)
+end
+
+function detect_query(id::Tuple{Integer,Integer,Integer})
+    return CASQuery(id)
+end
 
 
-function search_chemical(ID::String,cache=SEARCH_CACHE)
+function db_iteration_order(DB)
+    #generating keys iteration order: user, short database, long database
+    pkg_dbs = [:short,:long]
+    allkeys = collect(keys(DATA_DB))
+    user_dbs = setdiff(allkeys,pkg_dbs)
+    return append!(user_dbs,pkg_dbs)
+end
+
+
+function search_chemical(query,cache=SEARCH_CACHE)
     if cache !== nothing
         #the base is that two chemicals with different casing should be the same.
+        if query isa NTuple{3,Integer}
+            ID = tuple_to_casstr(query)
+        else
+            ID = string(query)
+        end
+        
+        if haskey(cache,ID)
+            return cache[ID]
+        end
+        
         normalized_id = Unicode.normalize(ID,casefold = true,stripmark=true)
         if haskey(cache,normalized_id)
             return cache[normalized_id]
         end
-        get!(cache,ID) do 
-            compound_id,key = search_chemical_id(detect_query(ID))
-            build_result(compound_id,key)      #return db.common_name[compound_id]
-        end
-        cache[normalized_id] = cache[ID]
+        
+        compound_id,key = search_chemical_id(detect_query(query))
+        res = build_result(compound_id,key)      #return db.common_name[compound_id]
+        cache[ID] = res
+        cache[normalized_id] = res
     else
-        query = detect_query(ID)
-        #@show query
-        compound_id,key = search_chemical_id(query)
-        build_result(compound_id,key)      #return db.common_name[compound_id]
+        compound_id,key = search_chemical_id(detect_query(query))
+        return build_result(compound_id,key)      #return db.common_name[compound_id]
     end
 end
 
@@ -65,11 +87,7 @@ function search_chemical_id(ID::AnyQuery;skip_common_name = false,try_strategies
     compound_id = -1
     id = value(ID)
     search_done = false
-    #generating keys iteration order: user, short database, long database
-    pkg_dbs = [:short,:long]
-    allkeys = collect(keys(DATA_DB))
-    user_dbs = setdiff(allkeys,pkg_dbs)
-    _keys = append!(user_dbs,pkg_dbs)
+    _keys = db_iteration_order(DATA_DB)
     for key in _keys
     db,sdb,sortdb = DATA_DB[key]
         if !skip_common_name
@@ -144,15 +162,13 @@ end
 end
 
 function search_chemical_id(ID::CASQuery)
-    id = cas_parse(value(ID))  
+    id = cas(ID)
     key = :cas_not_found
     compound_id = -1
-    #generating keys iteration order: user, short database, long database
     search_done = false
-    pkg_dbs = [:short,:long]
-    allkeys = collect(keys(DATA_DB))
-    user_dbs = setdiff(allkeys,pkg_dbs)
-    _keys = append!(user_dbs,pkg_dbs)
+    
+    _keys = db_iteration_order(DATA_DB)
+
     for key in _keys
         db,sdb,sortdb = DATA_DB[key]
         searchvec = view(db.CAS,sortdb.CAS_sort)
@@ -178,11 +194,9 @@ function search_chemical_id(ID::InChIKeyQuery)
     key = :inchikey_not_found
     compound_id = -1
     search_done = false
-    #generating keys iteration order: user, short database, long database
-    pkg_dbs = [:short,:long]
-    allkeys = collect(keys(DATA_DB))
-    user_dbs = setdiff(allkeys,pkg_dbs)
-    _keys = append!(user_dbs,pkg_dbs)
+   
+    _keys = db_iteration_order(DATA_DB)
+    
     for key in _keys
         db,sdb,sortdb = DATA_DB[key]
         searchvec = view(db.InChI_key,sortdb.InChI_key_sort)
@@ -203,15 +217,13 @@ end
 
 function search_chemical_id(ID::PubChemIDQuery)
     #pubchemid
-    id = parse(Int64,value(ID)) 
+    id = id_num(ID)
     key = :pubchem_not_found
     compound_id = -1
     search_done = false
-    #generating keys iteration order: user, short database, long database
-    pkg_dbs = [:short,:long]
-    allkeys = collect(keys(DATA_DB))
-    user_dbs = setdiff(allkeys,pkg_dbs)
-    _keys = append!(user_dbs,pkg_dbs)
+    
+    _keys = db_iteration_order(DATA_DB)
+
     for key in _keys
         db,sdb,sortdb = DATA_DB[key]
         searchvec = view(db.pubchemid,sortdb.pubchemid_sort)
@@ -231,27 +243,13 @@ function search_chemical_id(ID::PubChemIDQuery)
 end
 
 function search_chemical_id(ID::InChIQuery)
-    println("a")
-    id_lower = lowercase(value(ID))
-    re1 = r"^inchi=1s/"
-    re2 =  r"^inchi=1/"
-    t1 = occursin(re1,id_lower)
-    t2 = occursin(re2,id_lower)
-    if t1
-        id = chop(value(ID),head=9,tail=0)
-    elseif t2
-        id = chop(value(ID),head=8,tail=0)
-    else
-        throw("incorrect InChI passed")
-    end
+    id = value(ID)
     key = :inchi_not_found
     compound_id = -1
     search_done = false
-    #generating keys iteration order: user, short database, long database
-    pkg_dbs = [:short,:long]
-    allkeys = collect(keys(DATA_DB))
-    user_dbs = setdiff(allkeys,pkg_dbs)
-    _keys = append!(user_dbs,pkg_dbs)
+
+    _keys = db_iteration_order(DATA_DB)
+
     for key in _keys
         db,sdb,sortdb = DATA_DB[key]
         searchvec = view(db.InChI,sortdb.InChI_sort)
@@ -259,6 +257,33 @@ function search_chemical_id(ID::InChIQuery)
         #@show idx_sort
         if length(idx_sort) == 1 #found and element
             idx = only(sortdb.InChI_sort[idx_sort])
+            compound_id =idx
+            search_done = true
+        end
+    #found in db,returning
+        if search_done
+            return compound_id,key 
+        end
+    end
+    return compound_id,key
+end
+
+function search_chemical_id(ID::SMILESQuery)
+    #symbol: InChI_key
+    id = value(ID) 
+    key = :inchikey_not_found
+    compound_id = -1
+    search_done = false
+
+    _keys = db_iteration_order(DATA_DB)
+
+    for key in _keys
+        db,sdb,sortdb = DATA_DB[key]
+        searchvec = view(db.smiles,sortdb.smiles_sort)
+        idx_sort = searchsorted(searchvec,id)
+        #@show idx_sort
+        if length(idx_sort) == 1 #found and element
+            idx = only(sortdb.smiles_sort[idx_sort])
             compound_id =idx
             search_done = true
         end
