@@ -2,5 +2,7 @@ using ChemicalIdentifiers
 using Test
 
 @testset "ChemicalIdentifiers.jl" begin
-    # Write your tests here.
+    res1 = search_chemical("water",nothing)
+    res2 =  search_chemical("SMILES=O",nothing)
+    @test res1.formula == res2.formula
 end
