@@ -1,4 +1,4 @@
-# ChemicalIdentifiers
+# ChemicalIdentifiers.jl
 
 [![Build Status](https://github.com/longemen3000/ChemicalIdentifiers.jl/workflows/CI/badge.svg)](https://github.com/longemen3000/ChemicalIdentifiers.jl/actions)
 
