@@ -8,7 +8,7 @@ A chemical identifiers search package, using the databases present at CalebBell/
 ## Instalation:
 ```
 using Pkg
-Pkg.add(https://github.com/longemen3000/ChemicalIdentifiers.jl)
+Pkg.add("ChemicalIdentifiers.jl")
 ```
 The databases are downloaded, parsed,processed and stored as Apache Arrow files at the first package usage, so the first usage may take some time.
 
