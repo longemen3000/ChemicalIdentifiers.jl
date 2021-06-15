@@ -43,15 +43,16 @@ function detect_query(id::Tuple{Integer,Integer,Integer})
     return CASQuery(id)
 end
 
-
 function db_iteration_order(DB)
     #generating keys iteration order: user, short database, long database
-    pkg_dbs = [:short,:long]
-    allkeys = collect(keys(DATA_DB))
-    user_dbs = setdiff(allkeys,pkg_dbs)
-    return append!(user_dbs,pkg_dbs)
+    dbnames = [:short,:long]
+    for k in keys(DATA_DB)
+        if !(k in (:short,:long))
+            push!(dbnames,k)
+        end
+    end
+    return dbnames
 end
-
 
 function search_chemical(query,cache=SEARCH_CACHE)
     if cache !== nothing
@@ -81,7 +82,7 @@ function search_chemical(query,cache=SEARCH_CACHE)
     end
 end
 
-function search_chemical_id(ID::AnyQuery;skip_common_name = false,try_strategies = true)
+function search_chemical_id(ID::AnyQuery;skip_common_name = false,try_strategies = true)::Tuple{Int,Symbol}
     #skip_common_name skips search on the common_name col
     key = :not_found
     compound_id = -1
@@ -111,7 +112,7 @@ function search_chemical_id(ID::AnyQuery;skip_common_name = false,try_strategies
         if search_done
             return compound_id,key 
         end
-end
+    end
 
     if !search_done
         if !try_strategies #bail out here if requested
@@ -161,136 +162,66 @@ end
     end
 end
 
-function search_chemical_id(ID::CASQuery)
-    id = cas(ID)
-    key = :cas_not_found
-    compound_id = -1
-    search_done = false
-    
-    _keys = db_iteration_order(DATA_DB)
-
-    for key in _keys
-        db,sdb,sortdb = DATA_DB[key]
-        searchvec = view(db.CAS,sortdb.CAS_sort)
-        idx_sort = searchsorted(searchvec,id)
-        #@show idx_sort
-        if length(idx_sort) == 1 #found and element
-            idx = only(sortdb.CAS_sort[idx_sort])
-            compound_id =idx
-            search_done = true
-        end
-    #found in db,returning
-        if search_done
-            return compound_id,key 
-        end
+function search_chemical_id(ID::CASQuery)::Tuple{Int,Symbol}
+    id = cas(ID)  
+    compound_id,key = search_id_impl(id,:CAS)
+    if compound_id != -1 
+        return compound_id,key
     end
-    #try looking for cas on the synonims DB
     return search_chemical_id(AnyQuery(value(ID)),skip_common_name=true,try_strategies=false)
 end
 
-function search_chemical_id(ID::InChIKeyQuery)
-    #symbol: InChI_key
+function search_chemical_id(ID::InChIKeyQuery)::Tuple{Int,Symbol}
     id = value(ID) 
-    key = :inchikey_not_found
-    compound_id = -1
-    search_done = false
-   
-    _keys = db_iteration_order(DATA_DB)
-    
-    for key in _keys
-        db,sdb,sortdb = DATA_DB[key]
-        searchvec = view(db.InChI_key,sortdb.InChI_key_sort)
-        idx_sort = searchsorted(searchvec,id)
-        #@show idx_sort
-        if length(idx_sort) == 1 #found and element
-            idx = only(sortdb.InChI_key_sort[idx_sort])
-            compound_id =idx
-            search_done = true
-        end
-    #found in db,returning
-        if search_done
-            return compound_id,key 
-        end
-    end
-    return compound_id,key
+    return search_id_impl(id,:InChI_key)
 end
 
-function search_chemical_id(ID::PubChemIDQuery)
-    #pubchemid
+function search_chemical_id(ID::PubChemIDQuery)::Tuple{Int,Symbol}
     id = id_num(ID)
-    key = :pubchem_not_found
-    compound_id = -1
-    search_done = false
-    
-    _keys = db_iteration_order(DATA_DB)
-
-    for key in _keys
-        db,sdb,sortdb = DATA_DB[key]
-        searchvec = view(db.pubchemid,sortdb.pubchemid_sort)
-        idx_sort = searchsorted(searchvec,id)
-        #@show idx_sort
-        if length(idx_sort) == 1 #found and element
-            idx = only(sortdb.pubchemid_sort[idx_sort])
-            compound_id =idx
-            search_done = true
-        end
-    #found in db,returning
-        if search_done
-            return compound_id,key 
-        end
-    end
-    return compound_id,key
+    return search_id_impl(id,:pubchemid)
 end
 
-function search_chemical_id(ID::InChIQuery)
+function search_chemical_id(ID::InChIQuery)::Tuple{Int,Symbol}
     id = value(ID)
-    key = :inchi_not_found
-    compound_id = -1
-    search_done = false
-
-    _keys = db_iteration_order(DATA_DB)
-
-    for key in _keys
-        db,sdb,sortdb = DATA_DB[key]
-        searchvec = view(db.InChI,sortdb.InChI_sort)
-        idx_sort = searchsorted(searchvec,id)
-        #@show idx_sort
-        if length(idx_sort) == 1 #found and element
-            idx = only(sortdb.InChI_sort[idx_sort])
-            compound_id =idx
-            search_done = true
-        end
-    #found in db,returning
-        if search_done
-            return compound_id,key 
-        end
-    end
-    return compound_id,key
+    search_id_impl(id,:InChI)
 end
 
-function search_chemical_id(ID::SMILESQuery)
-    #symbol: InChI_key
+function search_chemical_id(ID::SMILESQuery)::Tuple{Int,Symbol}
     id = value(ID) 
-    key = :inchikey_not_found
-    compound_id = -1
+    search_id_impl(id,:smiles)
+end
+
+arrowtype(::Type{Int}) = Arrow.Primitive{Int,Vector{Int}}
+arrowtype(::Type{String}) = Arrow.List{String, Int32, Vector{UInt8}}
+arrowtype(::Type{Tuple{Int32,Int16,Int16}}) = Arrow.Struct{Tuple{Int32, Int16, Int16}, Tuple{Arrow.Primitive{Int32, Vector{Int32}}, Arrow.Primitive{Int16, Vector{Int16}}, Arrow.Primitive{Int16, Vector{Int16}}}}
+
+function search_id_impl(id::T,k::Symbol)::Tuple{Int,Symbol} where {T}
+    arrowT = arrowtype(T)
+    return search_id_impl(id,k,arrowT)
+end
+
+function search_id_impl(id::T,sym::Symbol,::Type{A})::Tuple{Int,Symbol} where {T,A}
+    compound_id::Int = -1
     search_done = false
-
-    _keys = db_iteration_order(DATA_DB)
-
-    for key in _keys
-        db,sdb,sortdb = DATA_DB[key]
-        searchvec = view(db.smiles,sortdb.smiles_sort)
-        idx_sort = searchsorted(searchvec,id)
+    dbnames = db_iteration_order(DATA_DB)::Vector{Symbol}
+    for dbname in dbnames
+        db,_,sortdb = DATA_DB[dbname]
+        dbcol = getproperty(db,sym)::A
+        sort_sym = Symbol(sym,:_sort)
+        dbidx = getproperty(sortdb,sort_sym)::Arrow.Primitive{Int,Vector{Int}}
+        searchvec = view(dbcol,dbidx)
+        idxs = searchsorted(searchvec,id)
         #@show idx_sort
-        if length(idx_sort) == 1 #found and element
-            idx = only(sortdb.smiles_sort[idx_sort])
-            compound_id =idx
+        if length(idxs) == 1 #found and element
+            compound_id = only(dbidx[idxs])::Int
             search_done = true
-        end
-    #found in db,returning
+        else
+            throw("Search is not unique, multiple matches found for $id in database $dbname, on the $sym column")
+        end        
         if search_done
-            return compound_id,key 
+            return compound_id,dbname 
         end
     end
-    return compound_id,key
+    return compound_id,sym #to identify where it fails
 end
+

@@ -86,15 +86,25 @@ If you don't want to store the query, you could use `search_chemical(query,nothi
     include("search_types.jl")
     include("search.jl")
 
-    function __init__()
-        global download_cache = Scratch.@get_scratch!("databases")
-        url_short = "https://github.com/CalebBell/chemicals/raw/master/chemicals/Identifiers/chemical%20identifiers%20pubchem%20small.tsv"
-        url_long = "https://github.com/CalebBell/chemicals/raw/master/chemicals/Identifiers/chemical%20identifiers%20pubchem%20large.tsv"
-        load_data!(:short,url= url_short)
-        load_data!(:long,url = url_long)
+  function _precompile_()
+    ccall(:jl_generating_output, Cint, ()) == 1 || return nothing
+    Base.precompile(search_id_impl,(Int,Symbol))
+    Base.precompile(search_id_impl,(String,Symbol))
+    Base.precompile(search_id_impl,(Tuple{Int32,Int16,Int16},Symbol))
+    Base.precompile(search_chemical_id,(AnyQuery,))
+  end
 
-        load_db!(:short)
-        load_db!(:long)
-    end
+  function __init__()
+      global download_cache = Scratch.@get_scratch!("databases")
+      
+
+      url_short = "https://github.com/CalebBell/chemicals/raw/master/chemicals/Identifiers/chemical%20identifiers%20pubchem%20small.tsv"
+      url_long = "https://github.com/CalebBell/chemicals/raw/master/chemicals/Identifiers/chemical%20identifiers%20pubchem%20large.tsv"
+      load_data!(:short,url= url_short)
+      load_data!(:long,url = url_long)
+
+      load_db!(:short)
+      load_db!(:long)
+  end
 end
 
