@@ -120,7 +120,7 @@ function parse_and_write_db!(dbtype::Symbol)
     arrow_db = Arrow.Table(data.db)
     arrow_synonym_db = Arrow.Table(data.symsdb)
     arrow_sort_db = Arrow.Table(data.sorteddb)
-
+    return arrow_db,arrow_synonym_db,arrow_sort_db
 end
 """
     load_data!(key::Symbol;url=nothing,file=nothing)

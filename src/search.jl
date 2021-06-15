@@ -84,7 +84,6 @@ end
 
 function search_chemical_id(ID::AnyQuery;skip_common_name = false,try_strategies = true)::Tuple{Int,Symbol}
     #skip_common_name skips search on the common_name col
-    key = :not_found
     compound_id = -1
     id = value(ID)
     search_done = false
