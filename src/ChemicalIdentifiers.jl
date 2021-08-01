@@ -3,13 +3,14 @@ module ChemicalIdentifiers
     const DATA_DB = Dict{Symbol,Any}()   
     const DATA_INFO = Dict{Symbol,Any}()
     
-    import Unicode,Downloads,Arrow
+    import UUIDs, Unicode, Downloads
+    import Arrow
     import Scratch, Preferences
     export search_chemical
     
     download_cache = ""    
 
-
+    const PKG_UUID = parse(UUIDs.UUID,"fa4ea961-1416-484e-bda2-883ee1634ba5")
 
 """
     function search_chemical(query,cache=cache=ChemicalIdentifiers.SEARCH_CACHE)
@@ -81,10 +82,10 @@ The package stores each query in `ChemicalIdentifiers.SEARCH_CACHE` as a `Dict{S
 If you don't want to store the query, you could use `search_chemical(query,nothing)`, or, if you want your own cache to be used, pass your own cache via `search_chemical(query,mycache)`. 
     
 """
-    function search_chemical end
-    include("data_script.jl")
-    include("search_types.jl")
-    include("search.jl")
+  function search_chemical end
+  include("data_script.jl")
+  include("search_types.jl")
+  include("search.jl")
 
   function _precompile_()
     ccall(:jl_generating_output, Cint, ()) == 1 || return nothing
@@ -94,17 +95,27 @@ If you don't want to store the query, you could use `search_chemical(query,nothi
     Base.precompile(search_chemical_id,(AnyQuery,))
   end
 
+  function clear_download_cache!()
+    Preferences.@set_preferences!("CLEAR_CACHE" => "true")
+    @info("ChemicalIdentifiers.jl download cache has been marked for deletion; restart your Julia session for this change to take effect.")
+  end  
+
   function __init__()
-      global download_cache = Scratch.@get_scratch!("databases")
-      
+    clear_cache = Preferences.@load_preference("CLEAR_CACHE","false")
+    if clear_cache == "true"
+      @info "deleting download cache..."
+      Scratch.delete_scratch!(PKG_UUID,"databases")
+      Preferences.@set_preferences!("CLEAR_CACHE" => "false")
+    end  
+    global download_cache = Scratch.@get_scratch!("databases")
 
-      url_short = "https://github.com/CalebBell/chemicals/raw/master/chemicals/Identifiers/chemical%20identifiers%20pubchem%20small.tsv"
-      url_long = "https://github.com/CalebBell/chemicals/raw/master/chemicals/Identifiers/chemical%20identifiers%20pubchem%20large.tsv"
-      load_data!(:short,url= url_short)
-      load_data!(:long,url = url_long)
-
-      load_db!(:short)
-      load_db!(:long)
+    url_short = "https://github.com/CalebBell/chemicals/raw/master/chemicals/Identifiers/chemical%20identifiers%20pubchem%20small.tsv"
+    url_long = "https://github.com/CalebBell/chemicals/raw/master/chemicals/Identifiers/chemical%20identifiers%20pubchem%20large.tsv"
+    load_data!(:short,url= url_short)
+    load_data!(:long,url = url_long)
+    load_db!(:short)
+    load_db!(:long)
+    return nothing
   end
 end
 

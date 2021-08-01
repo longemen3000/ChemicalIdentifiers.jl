@@ -22,7 +22,6 @@ end
 
 function load_db!(dbtype::Symbol)
     data = DATA_INFO[dbtype]
-
     if !isfile(data.textdb)
         @info ":" * string(dbtype) * " database file not found, downloading from " * data.url
         url  = data.url
@@ -64,11 +63,10 @@ function parse_and_write_db!(dbtype::Symbol)
     common_name = Vector{String}(undef,i)
     _synonyms  = Vector{Vector{String}}(undef,i)
 
-    #@show i
     i = 0
     for line in eachline(path)
         i += 1
-        strs = line |> z->rstrip(z,'\n') |> z->split(z,'\t')
+        strs = line |> z->strip(z) |> z->split(z,('\t',';'))
         pubchemid[i] = parse(Int64,strs[1])
         CAS[i] = cas_parse(strs[2])
         formula[i] = strs[3]
@@ -80,21 +78,28 @@ function parse_and_write_db!(dbtype::Symbol)
         common_name[i] = strs[9]
         _synonyms[i]  = strs[10:end]
     end
-
+    
     syms_i = mapreduce(length,+,_synonyms)
     synonyms_list = Vector{String}(undef,syms_i)
     synonyms_index = Vector{Int}(undef,syms_i)
+    
+    #for some reason,some empty strings are generated as synonyms.
+    #those are eliminated here.
     
     k = 0
     for (ii,sym_vec) in pairs(_synonyms)
         
         for (jj,sym) in pairs(sym_vec)
-            k+=1
-            synonyms_list[k] = sym
-            synonyms_index[k] = ii
+            if !isempty(sym)
+                k+=1
+                synonyms_list[k] = sym
+                synonyms_index[k] = ii
+            end
         end
     end
 
+    resize!(synonyms_list,k)
+    resize!(synonyms_index,k)
 
     pubchemid_sort =sortperm(pubchemid)
     CAS_sort = sortperm(CAS)
@@ -122,6 +127,7 @@ function parse_and_write_db!(dbtype::Symbol)
     arrow_sort_db = Arrow.Table(data.sorteddb)
     return arrow_db,arrow_synonym_db,arrow_sort_db
 end
+
 """
     load_data!(key::Symbol;url=nothing,file=nothing)
 

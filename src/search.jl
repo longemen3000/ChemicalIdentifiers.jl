@@ -1,4 +1,24 @@
 const SEARCH_CACHE = Dict{String,Any}()
+"""
+    synonyms(query) 
+
+Given a chemical search query, return the synonyms associated to that query.
+This function doesn't have any cache.
+
+# Examples:
+```repl
+synonyms("water")
+```
+"""
+function synonyms(query)
+    compound_id,key = search_chemical_id(detect_query(query))
+    return __synonyms(compound_id,key)
+end
+
+function __synonyms(idx,key)
+    db,sdb = DATA_DB[key]
+    return sdb.list[findall(isequal(idx),sdb.index)]
+end
 
 function build_result(idx,key)
     if idx == -1
@@ -112,21 +132,33 @@ function search_chemical_id(ID::AnyQuery;skip_common_name = false,try_strategies
             return compound_id,key 
         end
     end
-
+ 
     if !search_done
         if !try_strategies #bail out here if requested
             return -1,:not_found
         end
     end
-    #result not found, trying same strategies as present in CalebBell/Chemicals
-    #strategy 1: trying without spaces and dashs
-    _ids = Vector{String}(undef,5)
+    #==
+    result not found, trying same strategies as present in CalebBell/Chemicals
+    #strategy 1: trying without spaces and dashs.
+    ==#
+    _ids = Vector{String}(undef,7)
     _ids[1] = Unicode.normalize(id,casefold = true,stripmark=true)
     _ids[2] = replace(_ids[1]," "=>"")
     _ids[3] = replace(_ids[2],"-"=>"")
     _ids[4] = replace(id," "=>"")
     _ids[5] = replace(_ids[4],"-"=>"")
-
+    
+    #those matches find chemicals of the form n-name 
+    #or 1-name 
+    _ids[6] = begin
+        if occursin(r"^1-[A-Za-z]+$",_ids[1]) |  occursin(r"^n-[A-Za-z]+$",_ids[1])
+            chop(id,head=2,tail=0)
+        else
+            _ids[6] = id
+        end
+    end
+    _ids[7] = Unicode.normalize(_ids[6],casefold = true,stripmark=true) 
     _ids = unique!(_ids)
     _ids = setdiff!(_ids,[id])
 
@@ -137,6 +169,8 @@ function search_chemical_id(ID::AnyQuery;skip_common_name = false,try_strategies
             break
         end
     end
+
+
     #strategy 2: trying to match in the form 'water (H2O)'
     if !search_done 
         re = r"\w+\s+\([\s\w]+\)"     
@@ -152,7 +186,7 @@ function search_chemical_id(ID::AnyQuery;skip_common_name = false,try_strategies
             end
         end
     end
-
+    
     #if something worked, return here, else, return not found
     if search_done
        return compound_id,key
