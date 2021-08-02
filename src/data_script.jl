@@ -130,15 +130,16 @@ function parse_and_write_db!(dbtype::Symbol)
     iupac_name_sort =sortperm(iupac_name)
     common_name_sort =sortperm(common_name)
     synonyms_sort = sortperm(synonyms_list)
-
+    
     list = synonyms_list[synonyms_sort]
     index = synonyms_index[synonyms_sort]
-    #there is the posibility of repeated elements:
+    #there is the posibility of repeated elements.
+    #this is not present in CalebBell/chemicals because it uses a dict, so equal keys
+    #store the same value
     list_unique_idx = unique_idxs_sorted(list)
     list = list[list_unique_idx]
     index = index[list_unique_idx]
-
-
+    
     db = (;pubchemid, CAS, formula, MW, smiles, InChI, InChI_key, iupac_name, common_name)
     synonym_db = (;list,index)
     sort_db = (;pubchemid_sort, CAS_sort, formula_sort, MW_sort, smiles_sort, InChI_sort, InChI_key_sort, iupac_name_sort, common_name_sort)
