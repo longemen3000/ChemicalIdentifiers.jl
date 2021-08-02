@@ -13,7 +13,20 @@ function cas_parse(str)
     return (n1,n2,n3)
 end
 
-
+function unique_idxs_sorted(vec)
+    n = length(vec)
+    res = zeros(Int,n)
+    k = 1
+    res[1] = k
+    @inbounds for i = 2:n
+        if !isequal(vec[i],vec[i-1])
+            k+=1
+            res[k] = i
+        end
+    end
+    resize!(res,k)
+    return res
+end
 """
     load_db!(dbtype::Symbol)
     downloads, processes and stores a database corresponding to the one with the same key stored in DATA_INFO
@@ -66,7 +79,7 @@ function parse_and_write_db!(dbtype::Symbol)
     i = 0
     for line in eachline(path)
         i += 1
-        strs = line |> z->strip(z) |> z->split(z,('\t',';'))
+        strs = line |> z->rstrip(z) |> z->split(z,'\t',limit=10)
         pubchemid[i] = parse(Int64,strs[1])
         CAS[i] = cas_parse(strs[2])
         formula[i] = strs[3]
@@ -76,7 +89,13 @@ function parse_and_write_db!(dbtype::Symbol)
         InChI_key[i] = strs[7]
         iupac_name[i] = strs[8]
         common_name[i] = strs[9]
-        _synonyms[i]  = strs[10:end]
+        if length(strs) >= 10 #not any synonyms
+            sym_i = split(strs[10],('\t',';'))
+            push!(sym_i,strs[8])
+            _synonyms[i]  = sym_i
+        else
+            _synonyms[i] = String[strs[8]]
+        end 
     end
     
     syms_i = mapreduce(length,+,_synonyms)
@@ -114,6 +133,12 @@ function parse_and_write_db!(dbtype::Symbol)
 
     list = synonyms_list[synonyms_sort]
     index = synonyms_index[synonyms_sort]
+    #there is the posibility of repeated elements:
+    list_unique_idx = unique_idxs_sorted(list)
+    list = list[list_unique_idx]
+    index = index[list_unique_idx]
+
+
     db = (;pubchemid, CAS, formula, MW, smiles, InChI, InChI_key, iupac_name, common_name)
     synonym_db = (;list,index)
     sort_db = (;pubchemid_sort, CAS_sort, formula_sort, MW_sort, smiles_sort, InChI_sort, InChI_key_sort, iupac_name_sort, common_name_sort)

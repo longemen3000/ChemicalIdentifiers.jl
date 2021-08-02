@@ -114,7 +114,7 @@ function search_chemical_id(ID::AnyQuery;skip_common_name = false,try_strategies
             searchvec = view(db.common_name,sortdb.common_name_sort)
             idx_sort = searchsorted(searchvec,id)
             #@show idx_sort
-            if length(idx_sort) == 1 #found and element
+            if length(idx_sort) == 1 #found an element
                 idx = only(sortdb.common_name_sort[idx_sort])
                 compound_id =idx
                 search_done = true
@@ -122,7 +122,7 @@ function search_chemical_id(ID::AnyQuery;skip_common_name = false,try_strategies
         end
         if !search_done
             idx = searchsorted(sdb.list,id)
-            if length(idx) == 1 #found and element
+            if length(idx) == 1 #found an element
                 compound_id = only(sdb.index[idx])
                 search_done = true
             end
@@ -152,7 +152,7 @@ function search_chemical_id(ID::AnyQuery;skip_common_name = false,try_strategies
     #those matches find chemicals of the form n-name 
     #or 1-name 
     _ids[6] = begin
-        if occursin(r"^1-[A-Za-z]+$",_ids[1]) |  occursin(r"^n-[A-Za-z]+$",_ids[1])
+        if occursin(r"1-[A-Za-z]+",_ids[1]) |  occursin(r"n-[A-Za-z]+",_ids[1])
             chop(id,head=2,tail=0)
         else
             _ids[6] = id
