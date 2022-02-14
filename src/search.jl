@@ -176,7 +176,7 @@ function search_chemical_id(ID::AnyQuery;skip_common_name = false,try_strategies
         re = r"\w+\s+\([\s\w]+\)"     
         if occursin(re,id)
             _id = id |> z->replace(z,")"=>"") |> z->split(z,"(") .|> strip
-            id1,id2 = first(id1),last(id2)
+            id1,id2 = first(_id),last(_id)
             compound_id1,key1 = search_chemical_id(AnyQuery(id1))
             compound_id2,key2 = search_chemical_id(AnyQuery(id2))
             if (compound_id1 == compound_id2) & (key1==key2)
