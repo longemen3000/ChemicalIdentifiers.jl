@@ -248,7 +248,7 @@ function search_id_impl(id::T,sym::Symbol,::Type{A})::Tuple{Int,Symbol} where {T
         if length(idxs) == 1 #found and element
             compound_id = only(dbidx[idxs])::Int
             search_done = true
-        else
+        elseif length(idxs) > 1
             throw("Search is not unique, multiple matches found for $id in database $dbname, on the $sym column")
         end        
         if search_done
