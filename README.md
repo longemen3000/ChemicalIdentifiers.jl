@@ -10,7 +10,7 @@ A chemical identifiers search package, using the databases present at CalebBell/
 using Pkg
 Pkg.add("ChemicalIdentifiers.jl")
 ```
-The databases are downloaded, parsed,processed and stored as Apache Arrow files at the first package usage, so the first usage may take some time.
+The databases are downloaded, parsed, processed and stored as Apache Arrow files at the first package usage, so the first usage may take some time.
 
 ## Usage
 This package exports `search_chemical`, that, given a search string, performs a search on a database of over 70000 compounds, returning a Named Tuple with the identifiers of the substance in question. 
@@ -65,7 +65,7 @@ formula = "C2H4O", MW = 44.05256, smiles
 = "C=CO", InChI = "C2H4O/c1-2-3/h2-3H,1H2", InChI_key = "IMROMDMJAWUWLK-UHFFFAOYSA-N", iupac_name = "ethenol", common_name 
 = "ethenol")
 ```
-Searches by CAS and PubChemID are a little bit faster thanks to being encoded as native numeric types, other properties are stores as strings.
+Searches by CAS and PubChemID are a little bit faster thanks to being encoded as native numeric types, other properties are stored as strings.
 
 The package stores each query in `ChemicalIdentifiers.SEARCH_CACHE` as a `Dict{String,Any}`, so subsequent queries on the same (or similar) strings, dont pay the cost of searching in the database.
 
