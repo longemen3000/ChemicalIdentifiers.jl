@@ -18,7 +18,7 @@ This package exports `search_chemical`, that, given a search string, performs a 
 ```
 julia>using ChemicalIdentifiers
 julia> res = search_chemical("water")
-(pubchemid = 962, CAS = (7732, 18, 5), formula = "H2O", MW = 18.01528, smiles = "O", InChI = "H2O/h1H2", InChI_key = "XLYOFNOQVPJJNP-UHFFFAOYSA-N", iupac_nam e = "oxidane", common_name = "water")
+(pubchemid = 962, CAS = (7732, 18, 5), formula = "H2O", MW = 18.01528, smiles = "O", InChI = "H2O/h1H2", InChI_key = "XLYOFNOQVPJJNP-UHFFFAOYSA-N", iupac_name = "oxidane", common_name = "water")
 
 #worst case scenario, not found on the present databases
 julia> @btime search_chemical("dimethylpyruvic acid22",nothing)
