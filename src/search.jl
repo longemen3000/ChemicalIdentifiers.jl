@@ -74,6 +74,36 @@ function db_iteration_order(DB)
     return dbnames
 end
 
+#string modifications to look for
+function modified_ids!(id_vector,id)
+    #normalizes and removes any extra spaces
+    normalized = replace(Unicode.normalize(id,casefold = true,stripmark=true),r"\s+" => " ")
+    #if the normalized id is different than the input value
+    if normalized != id
+        push!(id_vector,normalized)
+
+        normmalized_no_spaces = replace(normalized," "=>"")
+        push!(id_vector,normmalized_no_spaces)
+
+        normmalized_no_dashes = replace(normalized,"-"=>"")
+        push!(id_vector,normmalized_no_dashes)
+
+        normalized_no_spaces_no_dash = replace(normmalized_no_spaces,"-"=>"")
+        push!(id_vector,normalized_no_spaces_no_dash)
+    end
+
+    no_spaces = replace(id," "=>"")
+    push!(id_vector,no_spaces)
+
+    no_dashes = replace(id,"-"=>"")
+    push!(id_vector,no_dashes)
+
+    no_spaces_no_dash = replace(no_spaces,"-"=>"")
+    push!(id_vector,no_spaces_no_dash)
+
+    return unique!(id_vector)
+end
+
 function search_chemical(query,cache=SEARCH_CACHE)
     if cache !== nothing
         #the base is that two chemicals with different casing should be the same.
@@ -102,10 +132,20 @@ function search_chemical(query,cache=SEARCH_CACHE)
     end
 end
 
-function search_chemical_id(ID::AnyQuery;skip_common_name = false,try_strategies = true)::Tuple{Int,Symbol}
+function search_chemical_id(ID::AnyQuery;skip_common_name = false,try_strategies = true, original_query = "")::Tuple{Int,Symbol}
     #skip_common_name skips search on the common_name col
     compound_id = -1
     id = value(ID)
+    fail = (-1,:not_found)
+
+    if original_query == id
+        #this query has already been looked for.
+        return fail
+    end
+    #set original_query.
+    if original_query == ""
+        original_query = id
+    end    
     search_done = false
     _keys = db_iteration_order(DATA_DB)
     for key in _keys
@@ -113,7 +153,6 @@ function search_chemical_id(ID::AnyQuery;skip_common_name = false,try_strategies
         if !skip_common_name
             searchvec = view(db.common_name,sortdb.common_name_sort)
             idx_sort = searchsorted(searchvec,id)
-            #@show idx_sort
             if length(idx_sort) == 1 #found an element
                 idx = only(sortdb.common_name_sort[idx_sort])
                 compound_id =idx
@@ -128,71 +167,65 @@ function search_chemical_id(ID::AnyQuery;skip_common_name = false,try_strategies
             end
         end
         #found in db,returning
-        if search_done
-            return compound_id,key 
-        end
+        search_done && return compound_id,key 
     end
- 
-    if !search_done
-        if !try_strategies #bail out here if requested
-            return -1,:not_found
-        end
-    end
+    
+    #bail out here if requested
+    !try_strategies && return fail
+
+    
     #==
     result not found, trying same strategies as present in CalebBell/Chemicals
     #strategy 1: trying without spaces and dashs.
     ==#
-    _ids = Vector{String}(undef,7)
-    _ids[1] = Unicode.normalize(id,casefold = true,stripmark=true)
-    _ids[2] = replace(_ids[1]," "=>"")
-    _ids[3] = replace(_ids[2],"-"=>"")
-    _ids[4] = replace(id," "=>"")
-    _ids[5] = replace(_ids[4],"-"=>"")
+    _ids = Vector{String}(undef,0)
     
+    #adds unique modified variants, writes those variants in _ids
+    modified_ids!(_ids,id)
     #those matches find chemicals of the form n-name 
-    #or 1-name 
-    _ids[6] = begin
-        if occursin(r"1-[A-Za-z]+",_ids[1]) |  occursin(r"n-[A-Za-z]+",_ids[1])
-            chop(id,head=2,tail=0)
-        else
-            _ids[6] = id
-        end
+    #or 1-name
+    
+    if occursin(r"1-[A-Za-z]+",_ids[1]) |  occursin(r"n-[A-Za-z]+",_ids[1])
+        modified_ids!(_ids,chop(id,head=2,tail=0))
     end
-    _ids[7] = Unicode.normalize(_ids[6],casefold = true,stripmark=true) 
-    _ids = unique!(_ids)
-    _ids = setdiff!(_ids,[id])
 
+    #propyl buthyl ether
+    modified_ids!(_ids,replace(replace(id,"yl" => "yl "),r"\s+" => " "))
+
+    #remove initial lookup value
+    filter!(!isequal(id),_ids)
+    #remove original query value
+    filter!(!isequal(original_query),_ids)
     for _id in _ids
-        compound_id,key = search_chemical_id(AnyQuery(_id))
+        #we don't try strategies here, because adding characters leads stackoverflow in search
+        compound_id,key = search_chemical_id(AnyQuery(_id),original_query = original_query)
         if compound_id !== -1
             search_done = true
             break
         end
     end
 
+    search_done && return compound_id,key
 
     #strategy 2: trying to match in the form 'water (H2O)'
-    if !search_done 
-        re = r"\w+\s+\([\s\w]+\)"     
-        if occursin(re,id)
-            _id = id |> z->replace(z,")"=>"") |> z->split(z,"(") .|> strip
-            id1,id2 = first(_id),last(_id)
-            compound_id1,key1 = search_chemical_id(AnyQuery(id1))
-            compound_id2,key2 = search_chemical_id(AnyQuery(id2))
-            if (compound_id1 == compound_id2) & (key1==key2)
-                search_done = true
-                compound_id = compound_id2
-                key = key2
-            end
+    re = r"\w+\s+\([\s\w]+\)"     
+    if occursin(re,id)
+        _id = id |> z->replace(z,")"=>"") |> z->split(z,"(") .|> strip
+        id1,id2 = first(_id),last(_id)
+        compound_id1,key1 = search_chemical_id(AnyQuery(id1),original_query = original_query)
+        compound_id2,key2 = search_chemical_id(AnyQuery(id2),original_query = original_query)
+        if (compound_id1 == compound_id2) & (key1==key2)
+            search_done = true
+            compound_id = compound_id2
+            key = key2
         end
     end
     
-    #if something worked, return here, else, return not found
-    if search_done
-       return compound_id,key
-    else
-        return -1,:not_found
-    end
+    search_done && return compound_id,key
+    
+    #nothing has been found
+    return fail
+    
 end
 
 function search_chemical_id(ID::CASQuery)::Tuple{Int,Symbol}
@@ -244,8 +277,7 @@ function search_id_impl(id::T,sym::Symbol,::Type{A})::Tuple{Int,Symbol} where {T
         dbidx = getproperty(sortdb,sort_sym)::Arrow.Primitive{Int,Vector{Int}}
         searchvec = view(dbcol,dbidx)
         idxs = searchsorted(searchvec,id)
-        #@show idx_sort
-        if length(idxs) == 1 #found and element
+        if length(idxs) == 1 #found an element
             compound_id = only(dbidx[idxs])::Int
             search_done = true
         elseif length(idxs) > 1

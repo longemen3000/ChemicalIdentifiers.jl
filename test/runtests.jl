@@ -8,3 +8,7 @@ using Test
     @test res1.formula == res2.formula
     @test res1.formula == res3.formula
 end
+
+@testset "issue #10" begin
+    res = search_chemical("propyl    ethylether   ",nothing) #spurious spaces
+end
