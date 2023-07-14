@@ -179,7 +179,6 @@ function search_chemical_id(ID::AnyQuery;skip_common_name = false,try_strategies
     #strategy 1: trying without spaces and dashs.
     ==#
     _ids = Vector{String}(undef,0)
-    
     #adds unique modified variants, writes those variants in _ids
     modified_ids!(_ids,id)
     #those matches find chemicals of the form n-name 
@@ -198,7 +197,7 @@ function search_chemical_id(ID::AnyQuery;skip_common_name = false,try_strategies
     filter!(!isequal(original_query),_ids)
     for _id in _ids
         #we don't try strategies here, because adding characters leads stackoverflow in search
-        compound_id,key = search_chemical_id(AnyQuery(_id),original_query = original_query)
+        compound_id,key = search_chemical_id(AnyQuery(_id),original_query = original_query,try_strategies = false)
         if compound_id !== -1
             search_done = true
             break

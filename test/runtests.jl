@@ -7,8 +7,9 @@ using Test
     res3 = search_chemical("water (H2O)", nothing)
     @test res1.formula == res2.formula
     @test res1.formula == res3.formula
+    @test ismissing(search_chemical("[3-(2,3-EPOXYPROXY)PROPYL]TRIMETHOXYSILANE",nothing))
 end
 
 @testset "issue #10" begin
-    res = search_chemical("propyl    ethylether   ",nothing) #spurious spaces
+    @test !ismissing(search_chemical("propyl    ethylether   ",nothing)) #spurious spaces
 end
