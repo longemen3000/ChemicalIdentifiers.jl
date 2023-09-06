@@ -56,8 +56,10 @@ function detect_query(id::String)
 end
 
 function detect_query(id::Int)
-        return PubChemIDQuery(id)
+    return PubChemIDQuery(id)
 end
+
+detect_query(::Missing) = MissingQuery()
 
 function detect_query(id::Tuple{Integer,Integer,Integer})
     return CASQuery(id)
@@ -254,6 +256,10 @@ end
 function search_chemical_id(ID::SMILESQuery)::Tuple{Int,Symbol}
     id = value(ID) 
     search_id_impl(id,:smiles)
+end
+
+function search_chemical_id(::MissingQuery)
+    return -1,missing
 end
 
 arrowtype(::Type{Int}) = Arrow.Primitive{Int,Vector{Int}}

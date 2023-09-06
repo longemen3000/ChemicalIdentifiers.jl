@@ -74,6 +74,8 @@ struct AnyQuery <: AbstractSearchQuery
     ID::String
 end
 
+struct MissingQuery <: AbstractSearchQuery end
+
 value(id::AbstractSearchQuery)::String = strip(id.ID) 
 
 
