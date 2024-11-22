@@ -55,6 +55,27 @@ function detect_query(id::String)
     end
 end
 
+detect_query(id,by::Nothing) = detect_query(id)
+function detect_query(id::String,by::Symbol)
+    if by == :pubchemid
+        return PubChemIDQuery(id)
+    elseif by == :cas
+        return CASQuery(id)
+    elseif by == :formula
+        return FormulaQuery(id)
+    elseif by == :smiles
+        return SMILESQuery(id)
+    elseif by == :inchi
+        return InChIQuery(id)
+    elseif by == :inchi_key
+        return InChIKeyQuery(id)
+    else
+        throw(ArgumentError("invalid specifier for `by` keyword: $by"))
+    end
+end
+
+detect_query(id::AbstractString,by::Symbol) = detect_query(String(id),by)
+detect_query(id::Missing,by::Symbol) = MissingQuery()
 detect_query(id::AbstractString) = detect_query(String(id))
 
 function detect_query(id::Int)
@@ -108,13 +129,17 @@ function modified_ids!(id_vector,id)
     return unique!(id_vector)
 end
 
-function search_chemical(query,cache=SEARCH_CACHE)
+function search_chemical(query,cache=SEARCH_CACHE;by = nothing)
     if cache !== nothing
         #the base is that two chemicals with different casing should be the same.
         if query isa NTuple{3,Integer}
             ID = tuple_to_casstr(query)
         else
             ID = string(query)
+        end
+
+        if by !== nothing
+            ID = ID * "____" * String(by)
         end
 
         if haskey(cache,ID)
@@ -125,13 +150,12 @@ function search_chemical(query,cache=SEARCH_CACHE)
         if haskey(cache,normalized_id)
             return cache[normalized_id]
         end
-
-        compound_id,key = search_chemical_id(detect_query(query))
+        compound_id,key = search_chemical_id(detect_query(query,by))
         res = build_result(compound_id,key)      #return db.common_name[compound_id]
         cache[ID] = res
         cache[normalized_id] = res
     else
-        compound_id,key = search_chemical_id(detect_query(query))
+        compound_id,key = search_chemical_id(detect_query(query,by))
         return build_result(compound_id,key)      #return db.common_name[compound_id]
     end
 end
@@ -243,6 +267,11 @@ end
 function search_chemical_id(ID::InChIKeyQuery)::Tuple{Int,Symbol}
     id = value(ID)
     return search_id_impl(id,:InChI_key)
+end
+
+function search_chemical_id(ID::FormulaQuery)::Tuple{Int,Symbol}
+    id = value(ID)
+    return search_id_impl(id,:formula)
 end
 
 function search_chemical_id(ID::PubChemIDQuery)::Tuple{Int,Symbol}
