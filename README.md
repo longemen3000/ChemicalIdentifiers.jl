@@ -98,4 +98,3 @@ ChemicalIdentifiers.load_db!(:custom)
 The raw databases are then stored in `ChemicalIdentifiers.DATA_DB`. if the data was already processed, then the arrow files are read directly, saving significant loading time.
 
 In case of adding user databases, those are searched first, so there is a possibility of collision.
-
