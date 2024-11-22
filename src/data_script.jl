@@ -27,18 +27,18 @@ function unique_idxs_sorted(vec)
     resize!(res,k)
     return res
 end
+
 """
     load_db!(dbtype::Symbol)
-    downloads, processes and stores a database corresponding to the one with the same key stored in DATA_INFO
 
+Downloads, processes and stores a database corresponding to the one with the same key stored in DATA_INFO
 """
-
 function load_db!(dbtype::Symbol)
     data = DATA_INFO[dbtype]
     if !isfile(data.textdb)
         @info ":" * string(dbtype) * " database file not found, downloading from " * data.url
         url  = data.url
-        fname = data.textdb   
+        fname = data.textdb
         path = Downloads.download(url,fname)
         @info ":" * string(dbtype) *  " database file downloaded."
     end
@@ -47,13 +47,13 @@ function load_db!(dbtype::Symbol)
     if !isfile(data.db)
         @info ":" * string(dbtype)  * " arrow file not generated, processing..."
         arrow_db,arrow_synonym_db,arrow_sort_db =parse_and_write_db!(dbtype)
-    else 
+    else
         arrow_db = Arrow.Table(data.db)
         arrow_synonym_db = Arrow.Table(data.symsdb)
         arrow_sort_db = Arrow.Table(data.sorteddb)
 
     end
-    DATA_DB[dbtype] = (arrow_db,arrow_synonym_db,arrow_sort_db) 
+    DATA_DB[dbtype] = (arrow_db,arrow_synonym_db,arrow_sort_db)
     return arrow_db,arrow_synonym_db,arrow_sort_db
 end
 
@@ -95,19 +95,19 @@ function parse_and_write_db!(dbtype::Symbol)
             _synonyms[i]  = sym_i
         else
             _synonyms[i] = String[strs[8]]
-        end 
+        end
     end
-    
+
     syms_i = mapreduce(length,+,_synonyms)
     synonyms_list = Vector{String}(undef,syms_i)
     synonyms_index = Vector{Int}(undef,syms_i)
-    
+
     #for some reason,some empty strings are generated as synonyms.
     #those are eliminated here.
-    
+
     k = 0
     for (ii,sym_vec) in pairs(_synonyms)
-        
+
         for (jj,sym) in pairs(sym_vec)
             if !isempty(sym)
                 k+=1
@@ -130,7 +130,7 @@ function parse_and_write_db!(dbtype::Symbol)
     iupac_name_sort =sortperm(iupac_name)
     common_name_sort =sortperm(common_name)
     synonyms_sort = sortperm(synonyms_list)
-    
+
     list = synonyms_list[synonyms_sort]
     index = synonyms_index[synonyms_sort]
     #there is the posibility of repeated elements.
@@ -139,11 +139,11 @@ function parse_and_write_db!(dbtype::Symbol)
     list_unique_idx = unique_idxs_sorted(list)
     list = list[list_unique_idx]
     index = index[list_unique_idx]
-    
+
     db = (;pubchemid, CAS, formula, MW, smiles, InChI, InChI_key, iupac_name, common_name)
     synonym_db = (;list,index)
     sort_db = (;pubchemid_sort, CAS_sort, formula_sort, MW_sort, smiles_sort, InChI_sort, InChI_key_sort, iupac_name_sort, common_name_sort)
-    
+
     Arrow.write(data.db,db)
     Arrow.write(data.symsdb,synonym_db)
     Arrow.write(data.sorteddb,sort_db)
@@ -157,14 +157,14 @@ end
 """
     load_data!(key::Symbol;url=nothing,file=nothing)
 
-generates and adds to the global DATA_INFO dict a new database. download and process this database with ´load_db(key)´
+Generates and adds to the global DATA_INFO dict a new database. download and process this database with ´load_db(key)´
 """
 function load_data!(key::Symbol;url=nothing,file=nothing)
-    if url == file == nothing 
+    if url == file == nothing
         throw(ArgumentError("a file or a url must be provided."))
     elseif (url !== nothing) & (file !== nothing)
         throw(ArgumentError("a file or a url must be provided."))
-    elseif (url !== nothing)  
+    elseif (url !== nothing)
         fname = joinpath(download_cache, "pubchem_" * string(key))
         farrow = fname * ".arrow"
         fsyms = fname * "_synonyms.arrow"
@@ -181,15 +181,3 @@ function load_data!(key::Symbol;url=nothing,file=nothing)
     end
     DATA_INFO[key] = data
 end
-
-
-
-
-
-#3 * x^0.7 - 2 * x + 1
-#a,b,c,a
-#3,2,1,0.7
-#=
-ax = bx-c
-c = (b-a)x
-=#

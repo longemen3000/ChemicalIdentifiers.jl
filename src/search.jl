@@ -1,6 +1,6 @@
 const SEARCH_CACHE = Dict{String,Any}()
 """
-    synonyms(query) 
+    synonyms(query)
 
 Given a chemical search query, return the synonyms associated to that query.
 This function doesn't have any cache.
@@ -116,16 +116,16 @@ function search_chemical(query,cache=SEARCH_CACHE)
         else
             ID = string(query)
         end
-        
+
         if haskey(cache,ID)
             return cache[ID]
         end
-        
+
         normalized_id = Unicode.normalize(ID,casefold = true,stripmark=true)
         if haskey(cache,normalized_id)
             return cache[normalized_id]
         end
-        
+
         compound_id,key = search_chemical_id(detect_query(query))
         res = build_result(compound_id,key)      #return db.common_name[compound_id]
         cache[ID] = res
@@ -149,7 +149,7 @@ function search_chemical_id(ID::AnyQuery;skip_common_name = false,try_strategies
     #set original_query.
     if original_query == ""
         original_query = id
-    end    
+    end
     search_done = false
     _keys = db_iteration_order(DATA_DB)
     for key in _keys
@@ -171,13 +171,13 @@ function search_chemical_id(ID::AnyQuery;skip_common_name = false,try_strategies
             end
         end
         #found in db,returning
-        search_done && return compound_id,key 
+        search_done && return compound_id,key
     end
-    
+
     #bail out here if requested
     !try_strategies && return fail
 
-    
+
     #==
     result not found, trying same strategies as present in CalebBell/Chemicals
     #strategy 1: trying without spaces and dashs.
@@ -185,9 +185,9 @@ function search_chemical_id(ID::AnyQuery;skip_common_name = false,try_strategies
     _ids = Vector{String}(undef,0)
     #adds unique modified variants, writes those variants in _ids
     modified_ids!(_ids,id)
-    #those matches find chemicals of the form n-name 
+    #those matches find chemicals of the form n-name
     #or 1-name
-    
+
     if occursin(r"1-[A-Za-z]+",_ids[1]) |  occursin(r"n-[A-Za-z]+",_ids[1])
         modified_ids!(_ids,chop(id,head=2,tail=0))
     end
@@ -211,7 +211,7 @@ function search_chemical_id(ID::AnyQuery;skip_common_name = false,try_strategies
     search_done && return compound_id,key
 
     #strategy 2: trying to match in the form 'water (H2O)'
-    re = r"\w+\s+\([\s\w]+\)"     
+    re = r"\w+\s+\([\s\w]+\)"
     if occursin(re,id)
         _id = id |> z->replace(z,")"=>"") |> z->split(z,"(") .|> strip
         id1,id2 = first(_id),last(_id)
@@ -223,25 +223,25 @@ function search_chemical_id(ID::AnyQuery;skip_common_name = false,try_strategies
             key = key2
         end
     end
-    
+
     search_done && return compound_id,key
-    
+
     #nothing has been found
     return fail
-    
+
 end
 
 function search_chemical_id(ID::CASQuery)::Tuple{Int,Symbol}
-    id = cas(ID)  
+    id = cas(ID)
     compound_id,key = search_id_impl(id,:CAS)
-    if compound_id != -1 
+    if compound_id != -1
         return compound_id,key
     end
     return search_chemical_id(AnyQuery(value(ID)),skip_common_name=true,try_strategies=false)
 end
 
 function search_chemical_id(ID::InChIKeyQuery)::Tuple{Int,Symbol}
-    id = value(ID) 
+    id = value(ID)
     return search_id_impl(id,:InChI_key)
 end
 
@@ -256,7 +256,7 @@ function search_chemical_id(ID::InChIQuery)::Tuple{Int,Symbol}
 end
 
 function search_chemical_id(ID::SMILESQuery)::Tuple{Int,Symbol}
-    id = value(ID) 
+    id = value(ID)
     search_id_impl(id,:smiles)
 end
 
@@ -289,11 +289,10 @@ function search_id_impl(id::T,sym::Symbol,::Type{A})::Tuple{Int,Symbol} where {T
             search_done = true
         elseif length(idxs) > 1
             throw("Search is not unique, multiple matches found for $id in database $dbname, on the $sym column")
-        end        
+        end
         if search_done
-            return compound_id,dbname 
+            return compound_id,dbname
         end
     end
     return compound_id,sym #to identify where it fails
 end
-

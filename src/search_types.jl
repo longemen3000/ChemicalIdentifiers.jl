@@ -1,6 +1,6 @@
 abstract type AbstractSearchQuery end
 
-struct CASQuery <: AbstractSearchQuery 
+struct CASQuery <: AbstractSearchQuery
     ID::String
     cas::Tuple{Int32,Int16,Int16}
 end
@@ -76,7 +76,7 @@ end
 
 struct MissingQuery <: AbstractSearchQuery end
 
-value(id::AbstractSearchQuery)::String = strip(id.ID) 
+value(id::AbstractSearchQuery)::String = strip(id.ID)
 
 
 function value(id::SMILESQuery)::String
@@ -108,7 +108,7 @@ check if a given string is a cas number and returns true or false accordingly.
 function is_cas(str)
     str = strip(str)
     #regex from https://gist.github.com/KhepryQuixote/00946f2f7dd5f89324d8#file-pypubchemxtractor-py-L22
-    cas_regex = r"^[1-9][0-9]{1,6}\\-[0-9]{2}\\-[0-9]$"  
+    cas_regex = r"^[1-9][0-9]{1,6}\\-[0-9]{2}\\-[0-9]$"
     return occursin(cas_regex,str)
 end
 
@@ -133,7 +133,7 @@ check if a given string is an InChI key and returns true or false accordingly.
 function is_inchikey(str)
     str = strip(str)
     #14(A-Z)-10(A-Z)-1(A-Z)
-    inchikey_regex  =r"[A-Z]{14}-[A-Z]{10}-[A-Z]{1}" 
+    inchikey_regex  =r"[A-Z]{14}-[A-Z]{10}-[A-Z]{1}"
     return occursin(inchikey_regex,str)
 end
 
@@ -154,7 +154,7 @@ A PubChem ID is a positive integer.
 function is_pubchemid(str)
     str = strip(str)
     res = tryparse(Int,str)
-   if res === nothing 
+   if res === nothing
     return false
    elseif res <= 0
     return false
@@ -171,7 +171,6 @@ check if a given string is an element symbol and returns true or false according
 function is_smiles(str)
     str = strip(str)
     str = uppercase(str)
-    smiles_regex  =r"^SMILES=" 
+    smiles_regex  =r"^SMILES="
     return occursin(smiles_regex,str)
 end
-
