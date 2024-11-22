@@ -15,7 +15,7 @@ Unicode = "4ec0a83e-493e-50e2-b9ac-8f72acf5a8f5"
 Arrow = "^1.5, 2"
 Preferences = "^1.2"
 Scratch = "^1.1"
-julia = "^1.6"D
+julia = "^1.6"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
