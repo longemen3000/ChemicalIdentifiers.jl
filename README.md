@@ -87,13 +87,13 @@ ChemicalIdentifiers.load_db!(:inorganic)
 ```
 or if you already have a local database:
 
-```
+```julia
 using ChemicalIdentifiers
 filepath = "path/to/my/db.tsv"
 ChemicalIdentifiers.load_data!(:custom,file = filepath)
 ChemicalIdentifiers.load_db!(:custom)
 ```
-`ChemicalIdentifiers.load_data!` will generate a named tuple of file paths (stored in `ChemicalIdentifiers.DATA_INFO`), and `ChemicalIdentifiers.load_db!` will use that data to generate the corresponding Apache Arrow files and store those in a [scratch](https://github.com/JuliaPackaging/Scratch.jl) space (`ChemicalIdentifiers.download_cache`). This download cache can be cleaned (in case a download goes wrong) with `ChemicalIdentifiers.clear_download_cache!()`
+`ChemicalIdentifiers.load_data!` will generate a named tuple of file paths (stored in `ChemicalIdentifiers.DATA_INFO`), and `ChemicalIdentifiers.load_db!` will use that data to generate the corresponding Apache Arrow files and store those in a [scratchspace](https://github.com/JuliaPackaging/Scratch.jl) (stored in `ChemicalIdentifiers.download_cache`). This download cache can be cleaned (in case a download goes wrong) with `ChemicalIdentifiers.clear_download_cache!()`
 
 The raw databases are then stored in `ChemicalIdentifiers.DATA_DB`. if the data was already processed, then the arrow files are read directly, saving significant loading time.
 
