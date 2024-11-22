@@ -55,6 +55,8 @@ function detect_query(id::String)
     end
 end
 
+detect_query(id::AbstractString) = detect_query(String(id))
+
 function detect_query(id::Int)
     return PubChemIDQuery(id)
 end
@@ -67,9 +69,9 @@ end
 
 function db_iteration_order(DB)
     #generating keys iteration order: user, short database, long database
-    dbnames = [:short,:long]
+    dbnames = [:short,:inorganic,:long]
     for k in keys(DATA_DB)
-        if !(k in (:short,:long))
+        if !(k in (:short,:inorganic,:long))
             push!(dbnames,k)
         end
     end

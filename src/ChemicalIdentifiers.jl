@@ -109,11 +109,14 @@ If you don't want to store the query, you could use `search_chemical(query,nothi
     end  
     global download_cache = Scratch.@get_scratch!("databases")
 
-    url_short = "https://github.com/CalebBell/chemicals/raw/master/chemicals/Identifiers/chemical%20identifiers%20pubchem%20small.tsv"
-    url_long = "https://github.com/CalebBell/chemicals/raw/master/chemicals/Identifiers/chemical%20identifiers%20pubchem%20large.tsv"
+    url_short = "https://raw.githubusercontent.com/CalebBell/chemicals/refs/heads/master/chemicals/Identifiers/chemical%20identifiers%20pubchem%20small.tsv"
+    url_inorganic = "https://raw.githubusercontent.com/CalebBell/chemicals/refs/heads/master/chemicals/Identifiers/Inorganic%20db.tsv"
+    url_long = "https://raw.githubusercontent.com/CalebBell/chemicals/refs/heads/master/chemicals/Identifiers/chemical%20identifiers%20pubchem%20large.tsv"
     load_data!(:short,url= url_short)
+    load_data!(:inorganic,url = url_inorganic)
     load_data!(:long,url = url_long)
     load_db!(:short)
+    load_db!(:inorganic)
     load_db!(:long)
     return nothing
   end
